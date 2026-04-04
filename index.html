@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ito online</title>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+
+<body>
+
+<h1>ito online</h1>
+
+<div id="login">
+<input id="name" placeholder="名前">
+<button onclick="join()">参加</button>
+</div>
+
+<div id="lobby" style="display:none">
+<h2>ルーム</h2>
+<div id="players"></div>
+<button id="startBtn" onclick="startGame()">ゲーム開始</button>
+</div>
+
+<div id="game" style="display:none">
+
+<h2 id="theme"></h2>
+
+<div>
+あなたのカード
+<h1 id="card"></h1>
+</div>
+
+<h3>ヒント</h3>
+<input id="hint">
+<button onclick="updateHint()">更新</button>
+
+<h3>ヒント一覧</h3>
+<ul id="hintList"></ul>
+
+<h3>並び順</h3>
+<ul id="order"></ul>
+
+<button onclick="check()">結果</button>
+
+<div id="result"></div>
+
+</div>
+
+<script src="firebase.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>

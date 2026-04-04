@@ -1,0 +1,19 @@
+
+body{
+font-family:sans-serif;
+max-width:700px;
+margin:auto;
+}
+
+li{
+border:1px solid #ccc;
+padding:8px;
+margin:4px;
+list-style:none;
+background:#fafafa;
+cursor:grab;
+}
+
+#card{
+font-size:40px;
+}
