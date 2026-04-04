@@ -46,12 +46,15 @@ function showScreen(name) {
 function updateHostUI() {
   const startBtn = document.getElementById("startBtn")
   const hostNote = document.getElementById("hostNote")
+  const checkBtn = document.getElementById("checkBtn")
   if (isHost) {
     startBtn.style.display = "block"
     hostNote.style.display = "none"
+    if (checkBtn) checkBtn.style.display = "block"
   } else {
     startBtn.style.display = "none"
     hostNote.style.display = "block"
+    if (checkBtn) checkBtn.style.display = "none"
   }
 }
 
@@ -132,10 +135,16 @@ function listenRoom() {
     if (data.state === "PLAY") {
       showScreen("game")
       initSortable()
+      document.getElementById("result-overlay").classList.add("hidden")
     }
 
     if (data.state === "LOBBY") {
       showScreen("lobby")
+    }
+
+    // 結果をFirestoreから全員に反映
+    if (data.state === "RESULT" && data.result) {
+      showResult(data.result)
     }
 
     // ホスト引き継ぎ
@@ -192,7 +201,7 @@ async function startGame() {
   const data = await res.json()
   const theme = data.themes[Math.floor(Math.random() * data.themes.length)]
 
-  await roomRef.set({ state: "PLAY", theme: theme }, { merge: true })
+  await roomRef.set({ state: "PLAY", theme: theme, result: null }, { merge: true })
 }
 
 // ========== ヒント更新 ==========
@@ -203,9 +212,9 @@ async function updateHint() {
   await playersRef.doc(playerId).update({ hint: text })
 }
 
-// ========== 結果確認 ==========
+// ========== 結果確認（ホストのみ送信、全員に反映） ==========
 
-function check() {
+async function check() {
   const items = document.querySelectorAll("#order li")
   let prev = 0
   let success = true
@@ -219,6 +228,17 @@ function check() {
     order.push({ name, card: n })
   })
 
+  const result = { success, order }
+
+  // Firestoreに保存 → 全員のlistenRoomが反応する
+  await roomRef.update({ state: "RESULT", result })
+}
+
+// ========== 結果表示（全員共通） ==========
+
+function showResult(result) {
+  const { success, order } = result
+
   document.getElementById("result-emoji").textContent = success ? "🎉" : "💥"
   const text = document.getElementById("result-text")
   text.textContent = success ? "成功！" : "失敗…"
@@ -229,6 +249,9 @@ function check() {
   ).join("")
 
   document.getElementById("result-overlay").classList.remove("hidden")
+
+  // 次のラウンドボタンはホストのみ表示
+  document.getElementById("nextRoundBtn").style.display = isHost ? "block" : "none"
 }
 
 function closeResult() {
