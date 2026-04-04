@@ -9,28 +9,26 @@ const roomRef = db.collection("rooms").doc(roomId)
 const playersRef = roomRef.collection("players")
 
 async function join(){
+  const name = document.getElementById("name").value
+  if(!name) return alert("名前を入力してください")
 
- const name=document.getElementById("name").value
- if(!name) return alert("名前を入力してください")
+  playerId = Math.random().toString(36).slice(2)
 
- playerId=Math.random().toString(36).slice(2)
+  const snapshot = await playersRef.get()
 
- const snapshot=await playersRef.get()
+  // ホストIDをFirestoreのroomに保存
+  if(snapshot.empty){
+    isHost = true
+    await roomRef.set({ hostId: playerId }, { merge: true })
+  }
 
- if(snapshot.empty) isHost=true
+  await playersRef.doc(playerId).set({ name, hint: "", card: 0 })
 
- await playersRef.doc(playerId).set({
-  name:name,
-  hint:"",
-  card:0
- })
+  document.getElementById("login").style.display = "none"
+  document.getElementById("lobby").style.display = "block"
 
- document.getElementById("login").style.display="none"
- document.getElementById("lobby").style.display="block"
-
- listenPlayers()
- listenRoom()
-
+  listenPlayers()
+  listenRoom()
 }
 
 function listenPlayers(){
@@ -75,25 +73,40 @@ function listenPlayers(){
 }
 
 function listenRoom(){
+  roomRef.onSnapshot(async doc => {
+    const data = doc.data()
+    if(!data) return
 
- roomRef.onSnapshot(doc=>{
+    if(data.theme){
+      document.getElementById("theme").innerText = data.theme
+    }
 
-  const data=doc.data()
-  if(!data) return
+    if(data.state === "PLAY"){
+      document.getElementById("lobby").style.display = "none"
+      document.getElementById("game").style.display = "block"
+    }
 
-  if(data.theme){
-   document.getElementById("theme").innerText=data.theme
-  }
-
-  if(data.state==="PLAY"){
-   document.getElementById("lobby").style.display="none"
-   document.getElementById("game").style.display="block"
-  }
-
- })
-
+    // ホストが抜けていたら引き継ぎ
+    if(data.hostId){
+      const hostDoc = await playersRef.doc(data.hostId).get()
+      if(!hostDoc.exists){
+        // ホストがいなくなった → 残っているプレイヤーの中で最初の人が引き継ぐ
+        const remaining = await playersRef.get()
+        if(!remaining.empty){
+          const newHostId = remaining.docs[0].id
+          if(newHostId === playerId){
+            isHost = true
+            await roomRef.update({ hostId: playerId })
+            alert("ホストが抜けたため、あなたがホストになりました")
+          }
+        }
+      } else {
+        // 自分がホストかどうか同期
+        isHost = (data.hostId === playerId)
+      }
+    }
+  })
 }
-
 async function startGame(){
 
  if(!isHost){
