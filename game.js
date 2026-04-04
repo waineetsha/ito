@@ -28,9 +28,6 @@ async function join() {
     card: 0
   })
 
-  // ブラウザを閉じたら自動でプレイヤー削除
-  playersRef.doc(playerId).onDisconnect().delete()
-
   document.getElementById("login").style.display = "none"
   document.getElementById("lobby").style.display = "block"
 
