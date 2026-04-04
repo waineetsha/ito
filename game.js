@@ -1,39 +1,69 @@
 let playerId
 let isHost = false
+let currentRoomId = null
 
-const params = new URLSearchParams(location.search)
-const roomId = params.get("room") || "default"
+const roomsRef = db.collection("rooms")
 
-document.getElementById("roomIdDisplay").textContent = roomId
+// ========== ルーム作成 ==========
 
-const roomRef = db.collection("rooms").doc(roomId)
-const playersRef = roomRef.collection("players")
-
-// ========== 参加 ==========
-
-async function join() {
-  const name = document.getElementById("name").value.trim()
+async function createRoom() {
+  const name = document.getElementById("name-create").value.trim()
   if (!name) return alert("名前を入力してください")
 
+  // ランダムな6文字のルームコード生成
+  const code = Math.random().toString(36).slice(2, 8).toUpperCase()
+  currentRoomId = code
+
+  isHost = true
   playerId = Math.random().toString(36).slice(2)
 
-  const snapshot = await playersRef.get()
+  const roomRef = db.collection("rooms").doc(code)
+  const playersRef = roomRef.collection("players")
 
-  if (snapshot.empty) {
-    isHost = true
-    await roomRef.set({ hostId: playerId, state: "LOBBY" }, { merge: true })
-  }
+  // ルーム作成（クリーンな状態で）
+  await roomRef.set({ hostId: playerId, state: "LOBBY", theme: null, result: null })
 
-  await playersRef.doc(playerId).set({
-    name: name,
-    hint: "",
-    card: 0
-  })
+  // ホスト自身を参加
+  await playersRef.doc(playerId).set({ name, hint: "", card: 0 })
 
+  enterLobby(code)
+}
+
+// ========== ルーム参加 ==========
+
+async function joinRoom() {
+  const code = document.getElementById("room-code").value.trim().toUpperCase()
+  const name = document.getElementById("name-join").value.trim()
+
+  if (!code) return alert("ルームコードを入力してください")
+  if (!name) return alert("名前を入力してください")
+
+  const roomRef = db.collection("rooms").doc(code)
+  const roomSnap = await roomRef.get()
+
+  if (!roomSnap.exists) return alert("ルームが見つかりません。コードを確認してください")
+
+  currentRoomId = code
+  playerId = Math.random().toString(36).slice(2)
+
+  const playersRef = roomRef.collection("players")
+  await playersRef.doc(playerId).set({ name, hint: "", card: 0 })
+
+  enterLobby(code)
+}
+
+// ========== ロビーへ ==========
+
+function enterLobby(code) {
+  document.getElementById("roomCodeDisplay").textContent = code
   showScreen("lobby")
   updateHostUI()
-  listenPlayers()
-  listenRoom()
+
+  const roomRef = db.collection("rooms").doc(code)
+  const playersRef = roomRef.collection("players")
+
+  listenPlayers(roomRef, playersRef)
+  listenRoom(roomRef, playersRef)
 }
 
 // ========== 画面切り替え ==========
@@ -60,7 +90,7 @@ function updateHostUI() {
 
 // ========== プレイヤー監視 ==========
 
-function listenPlayers() {
+function listenPlayers(roomRef, playersRef) {
   playersRef.onSnapshot(snapshot => {
     // ロビーのプレイヤー一覧
     const playersDiv = document.getElementById("players")
@@ -123,7 +153,7 @@ function listenPlayers() {
 
 // ========== ルーム監視 ==========
 
-function listenRoom() {
+function listenRoom(roomRef, playersRef) {
   roomRef.onSnapshot(async doc => {
     const data = doc.data()
     if (!data) return
@@ -136,13 +166,13 @@ function listenRoom() {
       showScreen("game")
       initSortable()
       document.getElementById("result-overlay").classList.add("hidden")
+      updateHostUI()
     }
 
     if (data.state === "LOBBY") {
       showScreen("lobby")
     }
 
-    // 結果をFirestoreから全員に反映
     if (data.state === "RESULT" && data.result) {
       showResult(data.result)
     }
@@ -184,6 +214,9 @@ function initSortable() {
 async function startGame() {
   if (!isHost) return alert("ホストのみ開始できます")
 
+  const roomRef = db.collection("rooms").doc(currentRoomId)
+  const playersRef = roomRef.collection("players")
+
   const snapshot = await playersRef.get()
   const ids = []
   snapshot.forEach(doc => ids.push(doc.id))
@@ -201,7 +234,7 @@ async function startGame() {
   const data = await res.json()
   const theme = data.themes[Math.floor(Math.random() * data.themes.length)]
 
-  await roomRef.set({ state: "PLAY", theme: theme, result: null }, { merge: true })
+  await roomRef.set({ state: "PLAY", theme, result: null }, { merge: true })
 }
 
 // ========== ヒント更新 ==========
@@ -209,10 +242,11 @@ async function startGame() {
 async function updateHint() {
   const text = document.getElementById("hint").value.trim()
   if (!text) return
+  const playersRef = db.collection("rooms").doc(currentRoomId).collection("players")
   await playersRef.doc(playerId).update({ hint: text })
 }
 
-// ========== 結果確認（ホストのみ送信、全員に反映） ==========
+// ========== 結果確認 ==========
 
 async function check() {
   const items = document.querySelectorAll("#order li")
@@ -228,13 +262,11 @@ async function check() {
     order.push({ name, card: n })
   })
 
-  const result = { success, order }
-
-  // Firestoreに保存 → 全員のlistenRoomが反応する
-  await roomRef.update({ state: "RESULT", result })
+  const roomRef = db.collection("rooms").doc(currentRoomId)
+  await roomRef.update({ state: "RESULT", result: { success, order } })
 }
 
-// ========== 結果表示（全員共通） ==========
+// ========== 結果表示 ==========
 
 function showResult(result) {
   const { success, order } = result
@@ -249,8 +281,6 @@ function showResult(result) {
   ).join("")
 
   document.getElementById("result-overlay").classList.remove("hidden")
-
-  // 次のラウンドボタンはホストのみ表示
   document.getElementById("nextRoundBtn").style.display = isHost ? "block" : "none"
 }
 
