@@ -1,58 +1,97 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ito online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
-
 <body>
 
-<h1>ito online</h1>
+<div class="noise"></div>
 
-<div id="login">
-<input id="name" placeholder="名前">
-<button onclick="join()">参加</button>
+<!-- ログイン画面 -->
+<div id="screen-login" class="screen active">
+  <div class="login-wrap">
+    <div class="logo-block">
+      <div class="logo-ito">ito</div>
+      <div class="logo-sub">online</div>
+    </div>
+    <div class="login-card">
+      <p class="login-label">なまえ</p>
+      <input id="name" class="text-input" placeholder="ここに入力" maxlength="12" autocomplete="off">
+      <button class="btn btn-primary" onclick="join()">参加する</button>
+    </div>
+    <div class="room-info">room: <span id="roomIdDisplay"></span></div>
+  </div>
 </div>
 
-<div id="lobby" style="display:none">
-<h2>ルーム</h2>
-<div id="players"></div>
-<button id="startBtn" onclick="startGame()">ゲーム開始</button>
+<!-- ロビー画面 -->
+<div id="screen-lobby" class="screen">
+  <div class="lobby-wrap">
+    <div class="section-title">参加者</div>
+    <div id="players" class="player-list"></div>
+    <div class="lobby-actions">
+      <button class="btn btn-primary" id="startBtn" onclick="startGame()">ゲーム開始</button>
+      <p class="host-note" id="hostNote">ホストの開始を待っています…</p>
+    </div>
+  </div>
 </div>
 
-<div id="game" style="display:none">
+<!-- ゲーム画面 -->
+<div id="screen-game" class="screen">
 
-<h2 id="theme"></h2>
+  <!-- カード表示エリア -->
+  <div class="card-section">
+    <div class="theme-label">テーマ</div>
+    <div id="theme" class="theme-text"></div>
+    <div class="my-card-wrap">
+      <div class="my-card-label">あなたのカード</div>
+      <div class="my-card" id="card">—</div>
+    </div>
+  </div>
 
-<div>
-あなたのカード
-<h1 id="card"></h1>
-</div>
+  <!-- ヒント入力 -->
+  <div class="hint-section">
+    <div class="section-title">ヒントを入力</div>
+    <div class="hint-input-row">
+      <input id="hint" class="text-input" placeholder="数字を表すヒント…" autocomplete="off">
+      <button class="btn btn-accent" onclick="updateHint()">送信</button>
+    </div>
+  </div>
 
-<h3>ヒント</h3>
-<input id="hint">
-<button onclick="updateHint()">更新</button>
+  <!-- ヒント一覧 -->
+  <div class="hints-section">
+    <div class="section-title">みんなのヒント</div>
+    <ul id="hintList" class="hint-list"></ul>
+  </div>
 
-<h3>ヒント一覧</h3>
-<ul id="hintList"></ul>
+  <!-- 並び替え -->
+  <div class="order-section">
+    <div class="section-title">小さい順に並べよう <span class="drag-note">↕ ドラッグで並び替え</span></div>
+    <ul id="order" class="order-list"></ul>
+    <button class="btn btn-primary full-width" onclick="check()">結果を確認</button>
+  </div>
 
-<h3>並び順</h3>
-<ul id="order"></ul>
-
-<button onclick="check()">結果</button>
-
-<div id="result"></div>
+  <!-- 結果 -->
+  <div id="result-overlay" class="result-overlay hidden">
+    <div class="result-box">
+      <div id="result-emoji" class="result-emoji"></div>
+      <div id="result-text" class="result-text"></div>
+      <div id="result-cards" class="result-cards"></div>
+      <button class="btn btn-primary" onclick="nextRound()">次のラウンド</button>
+      <button class="btn btn-ghost" onclick="closeResult()">閉じる</button>
+    </div>
+  </div>
 
 </div>
 
 <script src="firebase.js"></script>
 <script src="game.js"></script>
-
 </body>
 </html>
