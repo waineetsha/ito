@@ -75,7 +75,7 @@
   <div class="order-section">
     <div class="section-title">小さい順に並べよう <span class="drag-note">↕ ドラッグで並び替え</span></div>
     <ul id="order" class="order-list"></ul>
-    <button class="btn btn-primary full-width" onclick="check()">結果を確認</button>
+    <button class="btn btn-primary full-width" id="checkBtn" onclick="check()">結果を確認</button>
   </div>
 
   <!-- 結果 -->
@@ -84,7 +84,7 @@
       <div id="result-emoji" class="result-emoji"></div>
       <div id="result-text" class="result-text"></div>
       <div id="result-cards" class="result-cards"></div>
-      <button class="btn btn-primary" onclick="nextRound()">次のラウンド</button>
+      <button class="btn btn-primary" id="nextRoundBtn" onclick="nextRound()">次のラウンド</button>
       <button class="btn btn-ghost" onclick="closeResult()">閉じる</button>
     </div>
   </div>
