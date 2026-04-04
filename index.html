@@ -22,18 +22,34 @@
       <div class="logo-ito">ito</div>
       <div class="logo-sub">online</div>
     </div>
-    <div class="login-card">
-      <p class="login-label">なまえ</p>
-      <input id="name" class="text-input" placeholder="ここに入力" maxlength="12" autocomplete="off">
-      <button class="btn btn-primary" onclick="join()">参加する</button>
+
+    <!-- ルーム作成 -->
+    <div class="login-card" id="card-create">
+      <p class="login-label">ルームを作成</p>
+      <input id="name-create" class="text-input" placeholder="あなたの名前" maxlength="12" autocomplete="off">
+      <button class="btn btn-primary" onclick="createRoom()">作成する</button>
     </div>
-    <div class="room-info">room: <span id="roomIdDisplay"></span></div>
+
+    <div class="login-divider">または</div>
+
+    <!-- ルーム参加 -->
+    <div class="login-card" id="card-join">
+      <p class="login-label">ルームに参加</p>
+      <input id="room-code" class="text-input" placeholder="ルームコード" maxlength="6" autocomplete="off" style="text-transform:uppercase">
+      <input id="name-join" class="text-input" placeholder="あなたの名前" maxlength="12" autocomplete="off">
+      <button class="btn btn-ghost" onclick="joinRoom()">参加する</button>
+    </div>
   </div>
 </div>
 
 <!-- ロビー画面 -->
 <div id="screen-lobby" class="screen">
   <div class="lobby-wrap">
+    <div class="room-code-display">
+      <div class="section-title">ルームコード</div>
+      <div class="room-code" id="roomCodeDisplay"></div>
+      <div class="room-code-hint">このコードを仲間に共有しよう</div>
+    </div>
     <div class="section-title">参加者</div>
     <div id="players" class="player-list"></div>
     <div class="lobby-actions">
