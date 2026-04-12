@@ -247,7 +247,7 @@ function renderPlay(data) {
   }
 
   $("hint-input-area").style.display = isSpectator ? "none" : "flex";
-  $("hint-input").value = hints[myId] || "";
+  if (document.activeElement !== $("hint-input")) $("hint-input").value = hints[myId] || "";
 
   renderSortBoard(order, players, hints);
   $("host-controls-play").style.display = isHost ? "block" : "none";
