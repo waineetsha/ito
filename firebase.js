@@ -1,26 +1,21 @@
-// firebase.js
-// ご自身のFirebaseプロジェクトの設定に変更してください
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAO5TuFOawHyQAA5hkKAPO5s8JdUZW1SfI",
+  authDomain: "who-ate--the-cheese.firebaseapp.com",
+  projectId: "who-ate--the-cheese",
+  storageBucket: "who-ate--the-cheese.firebasestorage.app",
+  messagingSenderId: "135374886454",
+  appId: "1:135374886454:web:cac68629a9a34882872a97",
+  measurementId: "G-8329C39BYR"
 };
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  arrayUnion
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-export { db, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion };
+const analytics = getAnalytics(app);
