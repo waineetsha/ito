@@ -9,7 +9,6 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ご自身のFirebaseプロジェクトの設定に変更してください
 const firebaseConfig = {
   apiKey: "AIzaSyAO5TuFOawHyQAA5hkKAPO5s8JdUZW1SfI",
   authDomain: "who-ate--the-cheese.firebaseapp.com",
