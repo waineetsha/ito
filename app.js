@@ -1,5 +1,5 @@
 // app.js - Firestore版
-import { db, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion } from "./firebase.js";
+import { db, doc, getDoc, setDoc, updateDoc, onSnapshot } from "./firebase.js";
 import { dealCards, pickTheme, isSorted, generateRoomId, generatePlayerId } from "./game.js";
 
 // ===== STATE =====
