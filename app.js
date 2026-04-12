@@ -125,13 +125,12 @@ async function joinRoom() {
       } else {
         isSpectator = false;
         isHost = (data.hostId === myId);
-        const updates = {};
-        updates[`rooms/${roomId}/players/${myId}`] = { name: myName };
+        // プレイヤーを追加
+        await update(ref(db, `rooms/${roomId}/players`), { [myId]: { name: myName } });
         // orderに追加
-        const order = data.order || [];
+        const order = Array.isArray(data.order) ? [...data.order] : [];
         if (!order.includes(myId)) order.push(myId);
-        updates[`rooms/${roomId}/order`] = order;
-        await update(ref(db), updates);
+        await set(ref(db, `rooms/${roomId}/order`), order);
       }
     }
 
