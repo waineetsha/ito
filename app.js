@@ -249,18 +249,6 @@ function renderPlay(data) {
   $("hint-input-area").style.display = isSpectator ? "none" : "flex";
   $("hint-input").value = hints[myId] || "";
 
-  $("hints-list").innerHTML = order.map(pid => {
-    const p = players[pid];
-    if (!p) return "";
-    const hint = hints[pid];
-    return `<div class="hint-item">
-      <span class="hint-name">${escapeHtml(p.name)}</span>
-      ${hint
-        ? `<span class="hint-text">${escapeHtml(hint)}</span>`
-        : `<span class="hint-empty">未入力</span>`}
-    </div>`;
-  }).join("");
-
   renderSortBoard(order, players, hints);
   $("host-controls-play").style.display = isHost ? "block" : "none";
 }
