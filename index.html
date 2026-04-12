@@ -1,113 +1,167 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ito online</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ito オンライン</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<div class="noise"></div>
-
-<!-- ログイン画面 -->
-<div id="screen-login" class="screen active">
-  <div class="login-wrap">
-    <div class="logo-block">
-      <div class="logo-ito">ito</div>
-      <div class="logo-sub">online</div>
-    </div>
-
-    <!-- ルーム作成 -->
-    <div class="login-card" id="card-create">
-      <p class="login-label">ルームを作成</p>
-      <input id="name-create" class="text-input" placeholder="あなたの名前" maxlength="12" autocomplete="off">
-      <button class="btn btn-primary" onclick="createRoom()">作成する</button>
-    </div>
-
-    <div class="login-divider">または</div>
-
-    <!-- ルーム参加 -->
-    <div class="login-card" id="card-join">
-      <p class="login-label">ルームに参加</p>
-      <input id="room-code" class="text-input" placeholder="ルームコード" maxlength="6" autocomplete="off" style="text-transform:uppercase">
-      <input id="name-join" class="text-input" placeholder="あなたの名前" maxlength="12" autocomplete="off">
-      <button class="btn btn-ghost" onclick="joinRoom()">参加する</button>
-    </div>
-  </div>
+<!-- ローディング -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p id="loading-msg">読み込み中...</p>
 </div>
 
-<!-- ロビー画面 -->
-<div id="screen-lobby" class="screen">
-  <div class="lobby-wrap">
-    <div class="room-code-display">
-      <div class="section-title">ルームコード</div>
-      <div class="room-code" id="roomCodeDisplay"></div>
-      <div class="room-code-hint">このコードを仲間に共有しよう</div>
-    </div>
-    <div class="section-title">参加者</div>
-    <div id="players" class="player-list"></div>
-    <div class="lobby-actions">
-      <button class="btn btn-primary" id="startBtn" onclick="startGame()">ゲーム開始</button>
-      <p class="host-note" id="hostNote">ホストの開始を待っています…</p>
-    </div>
-  </div>
-</div>
+<!-- トースト -->
+<div id="toast"></div>
 
-<!-- ゲーム画面 -->
-<div id="screen-game" class="screen">
+<div id="app">
 
-  <!-- カード表示エリア -->
-  <div class="card-section">
-    <div class="theme-label">テーマ</div>
-    <div id="theme" class="theme-text"></div>
-    <div class="my-card-wrap">
-      <div class="my-card-label">あなたのカード</div>
-      <div class="my-card" id="card">—</div>
+  <!-- ===== TOP SCREEN ===== -->
+  <div id="screen-top" class="screen">
+    <div class="logo-wrap">
+      <div class="logo">it<span>o</span></div>
+      <div class="logo-sub">数字カードゲーム オンライン版</div>
+    </div>
+    <div class="top-actions">
+      <button class="btn-primary" id="btn-create-room">ルームを作成</button>
+      <button class="btn-ghost" id="btn-join-manual">ルームIDで参加</button>
     </div>
   </div>
 
-  <!-- ヒント入力 -->
-  <div class="hint-section">
-    <div class="section-title">ヒントを入力</div>
-    <div class="hint-input-row">
-      <input id="hint" class="text-input" placeholder="数字を表すヒント…" autocomplete="off">
-      <button class="btn btn-accent" onclick="updateHint()">送信</button>
+  <!-- ===== NAME INPUT SCREEN ===== -->
+  <div id="screen-name" class="screen">
+    <div class="logo-wrap">
+      <div class="logo" style="font-size: 48px;">it<span>o</span></div>
+    </div>
+    <div class="card">
+      <div class="section-label">あなたの名前</div>
+      <div class="name-form">
+        <input type="text" id="input-name" placeholder="名前を入力..." maxlength="12" autofocus />
+        <div class="error-msg" id="name-error" style="display:none;"></div>
+        <div class="join-info" id="name-join-info"></div>
+        <button class="btn-primary" id="btn-join">参加する</button>
+      </div>
     </div>
   </div>
 
-  <!-- ヒント一覧 -->
-  <div class="hints-section">
-    <div class="section-title">みんなのヒント</div>
-    <ul id="hintList" class="hint-list"></ul>
-  </div>
+  <!-- ===== LOBBY SCREEN ===== -->
+  <div id="screen-lobby" class="screen">
+    <div class="logo-wrap">
+      <div class="logo" style="font-size: 48px;">it<span>o</span></div>
+    </div>
 
-  <!-- 並び替え -->
-  <div class="order-section">
-    <div class="section-title">小さい順に並べよう <span class="drag-note">↕ ドラッグで並び替え</span></div>
-    <ul id="order" class="order-list"></ul>
-    <button class="btn btn-primary full-width" id="checkBtn" onclick="check()">結果を確認</button>
-  </div>
+    <!-- 観戦バッジ -->
+    <div id="lobby-spectator-badge" class="spectator-badge" style="display:none;">
+      <span>👁</span> 観戦中
+    </div>
 
-  <!-- 結果 -->
-  <div id="result-overlay" class="result-overlay hidden">
-    <div class="result-box">
-      <div id="result-emoji" class="result-emoji"></div>
-      <div id="result-text" class="result-text"></div>
-      <div id="result-cards" class="result-cards"></div>
-      <button class="btn btn-primary" id="nextRoundBtn" onclick="nextRound()">次のラウンド</button>
-      <button class="btn btn-ghost" onclick="closeResult()">閉じる</button>
+    <!-- URL共有 -->
+    <div class="card">
+      <div class="section-label">招待URL</div>
+      <div class="room-url-box">
+        <span class="room-url-text" id="room-url-display"></span>
+        <button class="copy-btn" id="btn-copy-url">コピー</button>
+      </div>
+    </div>
+
+    <!-- プレイヤー一覧 -->
+    <div class="card">
+      <div class="section-label">プレイヤー</div>
+      <div class="player-list" id="lobby-players"></div>
+
+      <div id="lobby-spectator-section" style="display:none;">
+        <hr class="divider" />
+        <div class="section-label">観戦者</div>
+        <div class="player-list" id="lobby-spectators"></div>
+      </div>
+
+      <p class="lobby-status" id="lobby-status"></p>
+    </div>
+
+    <!-- ホスト操作 -->
+    <div id="lobby-host-area" style="display:none;">
+      <button class="btn-success" id="btn-start-game">ゲーム開始</button>
     </div>
   </div>
 
-</div>
+  <!-- ===== PLAY SCREEN ===== -->
+  <div id="screen-play" class="screen">
 
-<script src="firebase.js"></script>
-<script src="game.js"></script>
+    <!-- 観戦バッジ -->
+    <div id="play-spectator-badge" class="spectator-badge" style="display:none;">
+      <span>👁</span> 観戦中
+    </div>
+
+    <!-- テーマ -->
+    <div class="theme-box">
+      <div class="section-label" style="color:#ff3c3c; text-align:center;">お題</div>
+      <div class="theme-title" id="play-theme"></div>
+      <div class="theme-scale" id="play-theme-scale"></div>
+    </div>
+
+    <!-- 自分のカード -->
+    <div id="my-card-area" class="my-card-wrap">
+      <div class="my-card" id="my-card-num">?</div>
+    </div>
+
+    <!-- ヒント入力 -->
+    <div id="hint-input-area" class="hint-area" style="display:none;">
+      <input type="text" id="hint-input" placeholder="ヒントを入力（何度でも変更OK）" maxlength="20" />
+      <button id="btn-submit-hint">送信</button>
+    </div>
+
+    <!-- ヒント一覧 -->
+    <div class="card">
+      <div class="section-label">ヒント一覧</div>
+      <div id="hints-list" class="hints-list"></div>
+    </div>
+
+    <!-- 並び替えボード -->
+    <div class="card">
+      <div class="section-label">並び替えボード</div>
+      <div class="sort-board-label">
+        <span>⬅ 弱い・小さい・少ない</span>
+        <span>強い・大きい・多い ➡</span>
+      </div>
+      <div id="sort-board" class="sort-board"></div>
+      <p class="drag-hint" id="drag-hint-text">ドラッグして並び替え</p>
+    </div>
+
+    <!-- ホスト操作 -->
+    <div id="host-controls-play" class="host-controls" style="display:none;">
+      <div class="host-controls-label">ホスト操作</div>
+      <div class="host-btn-row">
+        <button class="btn-warn" id="btn-theme-change">お題チェンジ</button>
+        <button class="btn-primary" id="btn-confirm-order">順番確定</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== RESULT SCREEN ===== -->
+  <div id="screen-result" class="screen">
+
+    <div class="result-badge">
+      <div class="result-label" id="result-label">成功！</div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">カード公開（予想順）</div>
+      <div id="result-order" class="result-order"></div>
+    </div>
+
+    <!-- ホスト操作 -->
+    <div id="result-host-controls" style="display:none;">
+      <button class="btn-primary" id="btn-again">もう一度</button>
+    </div>
+
+  </div>
+
+</div><!-- /#app -->
+
+<script type="module" src="app.js"></script>
 </body>
 </html>
