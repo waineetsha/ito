@@ -1,5 +1,5 @@
-// app.js - メインアプリケーションロジック
-import { db, ref, set, get, update, onValue, push, remove } from "./firebase.js";
+// app.js - Firestore版
+import { db, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion } from "./firebase.js";
 import { dealCards, pickTheme, isSorted, generateRoomId, generatePlayerId } from "./game.js";
 
 // ===== STATE =====
@@ -10,8 +10,6 @@ let isHost = false;
 let isSpectator = false;
 let unsubscribe = null;
 let currentData = null;
-
-// ドラッグ用
 let dragSrcId = null;
 
 // ===== UTIL =====
@@ -39,6 +37,21 @@ function getRoomUrl(id) {
   return `${location.origin}${location.pathname}?room=${id}`;
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showError(id, msg) {
+  const el = $(id);
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 4000);
+}
+
 // ===== INIT =====
 async function init() {
   showLoading();
@@ -46,23 +59,18 @@ async function init() {
   roomId = params.get("room");
 
   if (roomId) {
-    // URL付きアクセス: 参加フロー
     hideLoading();
     showNameScreen();
   } else {
-    // トップ画面
     hideLoading();
     showScreen("screen-top");
   }
 }
 
 // ===== TOP SCREEN =====
-$("btn-create-room").addEventListener("click", async () => {
-  showLoading("ルームを作成中...");
+$("btn-create-room").addEventListener("click", () => {
   roomId = generateRoomId();
-  const newUrl = getRoomUrl(roomId);
   history.pushState({}, "", `?room=${roomId}`);
-  hideLoading();
   showNameScreen(true);
 });
 
@@ -95,15 +103,14 @@ async function joinRoom() {
   myName = name;
 
   try {
-    const roomRef = ref(db, `rooms/${roomId}`);
-    const snap = await get(roomRef);
-    const data = snap.val();
+    const roomRef = doc(db, "rooms", roomId);
+    const snap = await getDoc(roomRef);
 
-    if (!data) {
+    if (!snap.exists()) {
       // 新規ルーム作成
       isHost = true;
       isSpectator = false;
-      await set(roomRef, {
+      await setDoc(roomRef, {
         phase: "lobby",
         theme: "",
         themeScale: "",
@@ -116,21 +123,25 @@ async function joinRoom() {
       });
     } else {
       // 既存ルームへ参加
+      const data = snap.data();
       const playerCount = Object.keys(data.players || {}).length;
+
       if (playerCount >= 12) {
         // 観戦モード
         isSpectator = true;
         isHost = false;
-        await update(ref(db, `rooms/${roomId}/spectators`), { [myId]: { name: myName } });
+        await updateDoc(roomRef, {
+          [`spectators.${myId}`]: { name: myName }
+        });
       } else {
         isSpectator = false;
-        isHost = (data.hostId === myId);
-        // プレイヤーを追加
-        await update(ref(db, `rooms/${roomId}/players`), { [myId]: { name: myName } });
-        // orderに追加
+        isHost = false;
         const order = Array.isArray(data.order) ? [...data.order] : [];
         if (!order.includes(myId)) order.push(myId);
-        await set(ref(db, `rooms/${roomId}/order`), order);
+        await updateDoc(roomRef, {
+          [`players.${myId}`]: { name: myName },
+          order: order
+        });
       }
     }
 
@@ -138,6 +149,7 @@ async function joinRoom() {
     startListening();
   } catch (err) {
     hideLoading();
+    console.error(err);
     showError("name-error", "接続に失敗しました: " + err.message);
   }
 }
@@ -145,52 +157,44 @@ async function joinRoom() {
 // ===== REAL-TIME LISTENER =====
 function startListening() {
   if (unsubscribe) unsubscribe();
-  const roomRef = ref(db, `rooms/${roomId}`);
-  unsubscribe = onValue(roomRef, (snap) => {
-    const data = snap.val();
-    if (!data) return;
+  const roomRef = doc(db, "rooms", roomId);
+  unsubscribe = onSnapshot(roomRef, (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
     currentData = data;
-
-    // ホスト判定更新
     isHost = (data.hostId === myId);
 
     if (data.phase === "lobby") renderLobby(data);
     else if (data.phase === "play") renderPlay(data);
     else if (data.phase === "result") renderResult(data);
+  }, (err) => {
+    console.error("onSnapshot error:", err);
+    showToast("接続エラー: " + err.message);
   });
 }
 
 // ===== LOBBY =====
 function renderLobby(data) {
   showScreen("screen-lobby");
-
-  // URL表示
   $("room-url-display").textContent = getRoomUrl(roomId);
 
-  // プレイヤー一覧
   const players = data.players || {};
   $("lobby-players").innerHTML = Object.entries(players).map(([pid, p]) => {
     const isMe = pid === myId;
     const isH = pid === data.hostId;
-    return `<div class="player-chip${isH ? " host" : ""}${isMe ? " me" : ""}">${p.name}</div>`;
+    return `<div class="player-chip${isH ? " host" : ""}${isMe ? " me" : ""}">${escapeHtml(p.name)}</div>`;
   }).join("");
 
-  // 観戦者一覧
   const specs = data.spectators || {};
   const specCount = Object.keys(specs).length;
   $("lobby-spectators").innerHTML = specCount
-    ? Object.values(specs).map(s => `<div class="spectator-chip">👁 ${s.name}</div>`).join("")
+    ? Object.values(specs).map(s => `<div class="spectator-chip">👁 ${escapeHtml(s.name)}</div>`).join("")
     : "";
   $("lobby-spectator-section").style.display = specCount > 0 ? "block" : "none";
 
-  // 人数表示
   const pCount = Object.keys(players).length;
   $("lobby-status").textContent = `${pCount}/12 人参加中`;
-
-  // ゲーム開始ボタン（ホストのみ）
   $("lobby-host-area").style.display = isHost ? "block" : "none";
-
-  // 観戦中バッジ
   $("lobby-spectator-badge").style.display = isSpectator ? "flex" : "none";
 }
 
@@ -205,11 +209,11 @@ async function startNewRound() {
   const players = Object.keys(currentData.players || {});
   const cards = dealCards(players);
   const t = await pickTheme();
-  const order = currentData.order && currentData.order.length === players.length
+  const order = (currentData.order && currentData.order.length === players.length)
     ? currentData.order
     : players;
 
-  await update(ref(db, `rooms/${roomId}`), {
+  await updateDoc(doc(db, "rooms", roomId), {
     phase: "play",
     theme: t.theme,
     themeScale: t.scale,
@@ -219,7 +223,6 @@ async function startNewRound() {
   });
 }
 
-// ===== COPY URL =====
 $("btn-copy-url").addEventListener("click", () => {
   navigator.clipboard.writeText(getRoomUrl(roomId)).then(() => showToast("URLをコピーしました！"));
 });
@@ -232,14 +235,10 @@ function renderPlay(data) {
   const hints = data.hints || {};
   const order = data.order || Object.keys(players);
 
-  // 観戦バッジ
   $("play-spectator-badge").style.display = isSpectator ? "flex" : "none";
-
-  // テーマ
   $("play-theme").textContent = data.theme || "テーマなし";
   $("play-theme-scale").textContent = data.themeScale || "";
 
-  // 自分のカード（プレイヤーのみ）
   if (!isSpectator) {
     $("my-card-area").style.display = "block";
     $("my-card-num").textContent = data.cards?.[myId] ?? "?";
@@ -247,28 +246,22 @@ function renderPlay(data) {
     $("my-card-area").style.display = "none";
   }
 
-  // ヒント入力（プレイヤーのみ）
   $("hint-input-area").style.display = isSpectator ? "none" : "flex";
   $("hint-input").value = hints[myId] || "";
 
-  // ヒント一覧
   $("hints-list").innerHTML = order.map(pid => {
     const p = players[pid];
     if (!p) return "";
     const hint = hints[pid];
     return `<div class="hint-item">
-      <span class="hint-name">${p.name}</span>
+      <span class="hint-name">${escapeHtml(p.name)}</span>
       ${hint
         ? `<span class="hint-text">${escapeHtml(hint)}</span>`
-        : `<span class="hint-empty">未入力</span>`
-      }
+        : `<span class="hint-empty">未入力</span>`}
     </div>`;
   }).join("");
 
-  // 並び替えボード
   renderSortBoard(order, players, hints);
-
-  // ホスト操作
   $("host-controls-play").style.display = isHost ? "block" : "none";
 }
 
@@ -294,8 +287,7 @@ function renderSortBoard(order, players, hints) {
       <span class="sort-name">${escapeHtml(p.name)}</span>
       ${hint
         ? `<span class="sort-hint">${escapeHtml(hint)}</span>`
-        : `<span class="sort-hint-empty">ヒントなし</span>`
-      }
+        : `<span class="sort-hint-empty">ヒントなし</span>`}
     `;
 
     if (!isSpectator) {
@@ -305,7 +297,6 @@ function renderSortBoard(order, players, hints) {
       item.addEventListener("drop", onDrop);
       item.addEventListener("dragend", onDragEnd);
     }
-
     board.appendChild(item);
   });
 }
@@ -338,20 +329,20 @@ function onDrop(e) {
   order.splice(srcIdx, 1);
   order.splice(tgtIdx, 0, dragSrcId);
 
-  update(ref(db, `rooms/${roomId}`), { order });
+  updateDoc(doc(db, "rooms", roomId), { order });
 }
 function onDragEnd(e) {
   e.currentTarget.classList.remove("dragging");
   document.querySelectorAll(".drag-over-item").forEach(el => el.classList.remove("drag-over-item"));
 }
 
-// ===== HINT SUBMIT =====
+// ===== HINT =====
 $("btn-submit-hint").addEventListener("click", submitHint);
 $("hint-input").addEventListener("keydown", (e) => { if (e.key === "Enter") submitHint(); });
 
 function submitHint() {
   const hint = $("hint-input").value.trim();
-  update(ref(db, `rooms/${roomId}/hints`), { [myId]: hint || null });
+  updateDoc(doc(db, "rooms", roomId), { [`hints.${myId}`]: hint || "" });
   showToast("ヒントを更新しました");
 }
 
@@ -362,7 +353,7 @@ $("btn-theme-change").addEventListener("click", async () => {
   const players = Object.keys(currentData.players || {});
   const cards = dealCards(players);
   const t = await pickTheme();
-  await update(ref(db, `rooms/${roomId}`), {
+  await updateDoc(doc(db, "rooms", roomId), {
     theme: t.theme,
     themeScale: t.scale,
     cards,
@@ -376,14 +367,11 @@ $("btn-theme-change").addEventListener("click", async () => {
 // ===== HOST: 順番確定 =====
 $("btn-confirm-order").addEventListener("click", async () => {
   if (!isHost) return;
-  const data = currentData;
-  const order = data.order || [];
-  const cards = data.cards || {};
-
+  const order = currentData.order || [];
+  const cards = currentData.cards || {};
   if (order.length < 2) { showToast("2人以上必要です"); return; }
-
   const success = isSorted(order, cards);
-  await update(ref(db, `rooms/${roomId}`), { phase: "result", success });
+  await updateDoc(doc(db, "rooms", roomId), { phase: "result", success });
 });
 
 // ===== RESULT =====
@@ -399,7 +387,6 @@ function renderResult(data) {
   const cards = data.cards || {};
   const order = data.order || [];
 
-  // 実際の順番で並べてチェック
   let prevCard = -1;
   $("result-order").innerHTML = order.map((pid, idx) => {
     const p = players[pid];
@@ -425,22 +412,6 @@ $("btn-again").addEventListener("click", async () => {
   await startNewRound();
   hideLoading();
 });
-
-// ===== HELPERS =====
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function showError(id, msg) {
-  const el = $(id);
-  el.textContent = msg;
-  el.style.display = "block";
-  setTimeout(() => el.style.display = "none", 3000);
-}
 
 // ===== START =====
 init();

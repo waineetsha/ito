@@ -1,28 +1,26 @@
 // firebase.js
-// Firebase設定 - ご自身のFirebaseプロジェクトの設定に変更してください
+// ご自身のFirebaseプロジェクトの設定に変更してください
 const firebaseConfig = {
-  apiKey: "AIzaSyAO5TuFOawHyQAA5hkKAPO5s8JdUZW1SfI",
-  authDomain: "who-ate--the-cheese.firebaseapp.com",
-  projectId: "who-ate--the-cheese",
-  storageBucket: "who-ate--the-cheese.firebasestorage.app",
-  messagingSenderId: "135374886454",
-  appId: "1:135374886454:web:cac68629a9a34882872a97",
-  measurementId: "G-8329C39BYR"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getDatabase,
-  ref,
-  set,
-  get,
-  update,
-  onValue,
-  push,
-  remove
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const db = getFirestore(app);
 
-export { db, ref, set, get, update, onValue, push, remove };
+export { db, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion };
