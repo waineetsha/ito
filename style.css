@@ -402,16 +402,38 @@ input[type="text"]::placeholder { color: var(--text-muted); }
   padding: 0 4px;
 }
 .sort-board {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 8px;
+  min-height: 120px;
+  padding: 8px;
+  border-radius: var(--radius);
+  border: 1.5px dashed var(--border);
+  background: var(--surface);
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+  overflow-x: auto;
 }
 .sort-board.drag-over { border-color: var(--accent3); }
 
 .sort-item {
-  flex-direction: column;  /* ←横並び→縦に */
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 10px;
+  cursor: grab;
+  user-select: none;
+  transition: all 0.15s;
+  min-width: 80px;
+  max-width: 100px;
+  flex-shrink: 0;
+  text-align: center;
 }
 .sort-item:hover { border-color: var(--accent3); transform: translateY(-2px); }
 .sort-item.dragging {
