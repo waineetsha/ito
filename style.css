@@ -402,18 +402,9 @@ input[type="text"]::placeholder { color: var(--text-muted); }
   padding: 0 4px;
 }
 .sort-board {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
-  min-height: 120px;
-  padding: 8px;
-  border-radius: var(--radius);
-  border: 1.5px dashed var(--border);
-  background: var(--surface);
-  margin-bottom: 20px;
-  transition: border-color 0.2s;
-  overflow-x: auto;
 }
 .sort-board.drag-over { border-color: var(--accent3); }
 
